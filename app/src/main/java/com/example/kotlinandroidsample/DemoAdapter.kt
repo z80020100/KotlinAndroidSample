@@ -1,10 +1,10 @@
 package com.example.kotlinandroidsample
 
-import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.navigation.findNavController
 import androidx.recyclerview.widget.RecyclerView
 
 class DemoAdapter(
@@ -20,8 +20,7 @@ class DemoAdapter(
             tvDescription.text = demoItem.description
 
             itemView.setOnClickListener {
-                val intent = Intent(itemView.context, demoItem.targetActivity.java)
-                itemView.context.startActivity(intent)
+                it.findNavController().navigate(demoItem.navigationActionId)
             }
         }
     }
