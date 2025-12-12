@@ -13,6 +13,9 @@
         <action
             android:id="@+id/action_mainFragment_to_lifecycleScopeFragment"
             app:destination="@id/lifecycleScopeFragment" />
+        <action
+            android:id="@+id/action_mainFragment_to_usbSerialFragment"
+            app:destination="@id/usbSerialFragment" />
     </fragment>
 
     <fragment
@@ -20,5 +23,11 @@
         android:name="com.example.kotlinandroidsample.LifecycleScopeFragment"
         android:label="@string/demo_lifecycle_scope_title"
         tools:layout="@layout/fragment_lifecycle_scope" />
+
+    <fragment
+        android:id="@+id/usbSerialFragment"
+        android:name="com.example.kotlinandroidsample.usbserial.UsbSerialFragment"
+        android:label="@string/demo_usb_serial_title"
+        tools:layout="@layout/fragment_usb_serial" />
 
 </navigation>

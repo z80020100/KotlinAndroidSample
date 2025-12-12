@@ -2,4 +2,11 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Log colors for USB Serial communication -->
+    <color name="log_received">#4CAF50</color>  <!-- Green for received data -->
+    <color name="log_sent">#2196F3</color>      <!-- Blue for sent data -->
+    <color name="log_error">#F44336</color>     <!-- Red for errors -->
+    <color name="log_status">#9E9E9E</color>    <!-- Gray for status -->
+    <color name="log_info">#000000</color>      <!-- Black for info -->
 </resources>

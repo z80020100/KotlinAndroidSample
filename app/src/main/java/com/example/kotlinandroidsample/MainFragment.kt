@@ -34,6 +34,11 @@ class MainFragment : Fragment() {
                 title = getString(R.string.demo_lifecycle_scope_title),
                 description = getString(R.string.demo_lifecycle_scope_description),
                 navigationActionId = R.id.action_mainFragment_to_lifecycleScopeFragment
+            ),
+            DemoItem(
+                title = getString(R.string.demo_usb_serial_title),
+                description = getString(R.string.demo_usb_serial_description),
+                navigationActionId = R.id.action_mainFragment_to_usbSerialFragment
             )
         )
 
