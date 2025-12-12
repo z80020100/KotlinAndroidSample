@@ -5,6 +5,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.text.Editable
+import android.text.TextWatcher
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Bundle
@@ -190,6 +192,15 @@ class UsbSerialFragment : Fragment() {
                 updateUIState()
             }
         }
+
+        // Update send button state based on input text
+        etSendData.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                updateSendButtonState()
+            }
+        })
     }
 
     private fun setupSpinners() {
@@ -356,10 +367,6 @@ class UsbSerialFragment : Fragment() {
     private fun sendData() {
         try {
             var text = etSendData.text.toString()
-            if (text.isEmpty()) {
-                appendLog(LogType.ERROR, "Cannot send empty data")
-                return
-            }
 
             if (cbAppendNewline.isChecked) {
                 text += "\r\n"
@@ -471,10 +478,14 @@ class UsbSerialFragment : Fragment() {
         btnConnect.isEnabled = hasPermission && !isConnected
         btnDisconnect.isEnabled = isConnected
         btnApplyConfig.isEnabled = isConnected
-        btnSendData.isEnabled = isConnected
+        updateSendButtonState()
 
         // Update connection status with permission info
         updateConnectionStatus()
+    }
+
+    private fun updateSendButtonState() {
+        btnSendData.isEnabled = isConnected && etSendData.text.toString().isNotEmpty()
     }
 
     private fun updateConnectionStatus() {
