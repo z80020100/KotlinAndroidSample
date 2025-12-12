@@ -35,7 +35,6 @@ import java.util.*
 
 class UsbSerialFragment : Fragment() {
 
-    // View references
     private lateinit var btnScanDevices: MaterialButton
     private lateinit var btnRequestPermission: MaterialButton
     private lateinit var btnConnect: MaterialButton
@@ -58,38 +57,32 @@ class UsbSerialFragment : Fragment() {
     private lateinit var tvLogDisplay: TextView
     private lateinit var scrollLog: ScrollView
 
-    // USB Serial components
     private lateinit var usbManager: UsbManager
     private var usbSerialPort: UsbSerialPort? = null
     private var serialInputOutputManager: SerialInputOutputManager? = null
 
-    // State variables
     private var deviceList: MutableList<UsbDeviceInfo> = mutableListOf()
     private var selectedDevice: UsbDevice? = null
     private var isConnected: Boolean = false
     private var hasPermission: Boolean = false
     private var autoScroll: Boolean = true
     private val logBuffer = StringBuilder()
-    private val receiveBuffer = StringBuilder() // Buffer for incoming serial data
+    private val receiveBuffer = StringBuilder()
     private val timestampFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
+    private var textWatcher: TextWatcher? = null
 
-    // Broadcast receiver for USB permission
     private val usbPermissionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (ACTION_USB_PERMISSION == intent.action) {
                 synchronized(this) {
-                    // Use selectedDevice directly (more reliable than intent extra on some devices)
                     selectedDevice?.let { device ->
-                        // Get the intent's reported permission result (may be incorrect on some devices)
+                        // Intent result may be incorrect on some devices
                         val intentResult = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
-                        // Get the actual permission status
                         val actualPermission = usbManager.hasPermission(device)
 
-                        // Log both values for demo purposes (shows buggy device behavior)
                         appendLog(LogType.INFO, "Permission intent result: $intentResult")
                         appendLog(LogType.INFO, "Permission actual check: $actualPermission")
 
-                        // Use actual permission (more reliable)
                         hasPermission = actualPermission
 
                         if (hasPermission) {
@@ -115,32 +108,16 @@ class UsbSerialFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Initialize USB Manager
         usbManager = requireContext().getSystemService(Context.USB_SERVICE) as UsbManager
 
-        // Register broadcast receiver
-        // Note: USB permission broadcasts come from the system, so we need RECEIVER_EXPORTED
+        // RECEIVER_EXPORTED required for system USB permission broadcasts
         val filter = IntentFilter(ACTION_USB_PERMISSION)
-        registerReceiver(
-            requireContext(),
-            usbPermissionReceiver,
-            filter,
-            ContextCompat.RECEIVER_EXPORTED
-        )
+        registerReceiver(requireContext(), usbPermissionReceiver, filter, ContextCompat.RECEIVER_EXPORTED)
 
-        // Initialize views
         initializeViews(view)
-
-        // Setup click listeners
         setupClickListeners()
-
-        // Initialize spinners
         setupSpinners()
-
-        // Update UI state
         updateUIState()
-
-        // Initial log message
         appendLog(LogType.INFO, "USB Serial Demo initialized")
     }
 
@@ -180,66 +157,54 @@ class UsbSerialFragment : Fragment() {
             autoScroll = isChecked
         }
 
-        // Setup device dropdown click listener
         spinnerDevices.setOnItemClickListener { _, _, position, _ ->
             if (position < deviceList.size) {
                 selectedDevice = deviceList[position].device
                 tvDeviceInfo.text = "Selected: ${deviceList[position].getDetailedInfo()}"
-
-                // Check if this device already has permission
                 hasPermission = selectedDevice?.let { usbManager.hasPermission(it) } ?: false
-
                 updateUIState()
             }
         }
 
-        // Update send button state based on input text
-        etSendData.addTextChangedListener(object : TextWatcher {
+        textWatcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 updateSendButtonState()
             }
-        })
+        }
+        etSendData.addTextChangedListener(textWatcher)
     }
 
     private fun setupSpinners() {
-        // Baud rate dropdown
         val baudRateAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, BAUD_RATES)
         spinnerBaudRate.setAdapter(baudRateAdapter)
         spinnerBaudRate.setText(DEFAULT_BAUD_RATE, false)
 
-        // Data bits dropdown
         val dataBitsAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, DATA_BITS)
         spinnerDataBits.setAdapter(dataBitsAdapter)
         spinnerDataBits.setText(DEFAULT_DATA_BITS, false)
 
-        // Stop bits dropdown
         val stopBitsAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, STOP_BITS)
         spinnerStopBits.setAdapter(stopBitsAdapter)
         spinnerStopBits.setText(DEFAULT_STOP_BITS, false)
 
-        // Parity dropdown
         val parityAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, PARITY_OPTIONS)
         spinnerParity.setAdapter(parityAdapter)
         spinnerParity.setText(DEFAULT_PARITY, false)
     }
 
     private fun scanForUsbDevices() {
-        // Disconnect if currently connected
         if (isConnected) {
             disconnectFromDevice()
         }
 
-        // Get devices that have compatible serial drivers
         val availableDrivers = UsbSerialProber.getDefaultProber().findAllDrivers(usbManager)
         deviceList.clear()
-
         for (driver in availableDrivers) {
             deviceList.add(UsbDeviceInfo.from(driver.device))
         }
 
-        // Reset selection state
         spinnerDevices.setText("", false)
         selectedDevice = null
         hasPermission = false
@@ -249,16 +214,13 @@ class UsbSerialFragment : Fragment() {
             tvDeviceInfo.text = "No devices found"
             tvDeviceSectionHeader.text = "USB Device Selection"
         } else {
-            // Update dropdown adapter
             val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, deviceList)
             spinnerDevices.setAdapter(adapter)
 
-            // Show device count in header
             val deviceCount = deviceList.size
             val countText = if (deviceCount == 1) "1 device" else "$deviceCount devices"
             tvDeviceSectionHeader.text = "USB Device Selection ($countText)"
             tvDeviceInfo.text = "Select a device from the list"
-
             appendLog(LogType.STATUS, "Found $deviceCount USB device(s)")
         }
 
@@ -291,17 +253,12 @@ class UsbSerialFragment : Fragment() {
                     ?: throw IOException("Cannot open USB device")
 
                 val availableDrivers = UsbSerialProber.getDefaultProber().findAllDrivers(usbManager)
-                // Find driver matching the selected device
                 val driver = availableDrivers.find { it.device == device }
                     ?: throw IOException("No compatible driver found for this device")
 
                 usbSerialPort = driver.ports[0]
                 usbSerialPort?.open(connection)
-
-                // Apply default configuration
                 applySerialConfiguration()
-
-                // Start continuous reading
                 startContinuousReading()
 
                 isConnected = true
@@ -310,10 +267,7 @@ class UsbSerialFragment : Fragment() {
             } ?: appendLog(LogType.ERROR, "No device selected")
         } catch (e: Exception) {
             appendLog(LogType.ERROR, "Connection failed: ${e.message}")
-            // Clean up on failure
-            try {
-                usbSerialPort?.close()
-            } catch (_: Exception) {}
+            try { usbSerialPort?.close() } catch (_: Exception) {}
             usbSerialPort = null
             isConnected = false
             updateUIState()
@@ -386,36 +340,23 @@ class UsbSerialFragment : Fragment() {
     private fun startContinuousReading() {
         val listener = object : SerialInputOutputManager.Listener {
             override fun onNewData(data: ByteArray) {
-                lifecycleScope.launch(Dispatchers.Main) {
-                    // Append received data to buffer
-                    val text = data.toString(Charsets.UTF_8)
-                    receiveBuffer.append(text)
+                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                    receiveBuffer.append(data.toString(Charsets.UTF_8))
 
-                    // Process complete lines (ending with \n)
                     var newlineIndex = receiveBuffer.indexOf('\n')
                     while (newlineIndex >= 0) {
-                        // Extract one complete line
-                        val line = receiveBuffer.substring(0, newlineIndex)
-                        // Remove \r if present before \n
-                        val cleanLine = line.trimEnd('\r')
-
-                        // Log the complete line
-                        if (cleanLine.isNotEmpty()) {
-                            appendLog(LogType.RECEIVED, cleanLine)
+                        val line = receiveBuffer.substring(0, newlineIndex).trimEnd('\r')
+                        if (line.isNotEmpty()) {
+                            appendLog(LogType.RECEIVED, line)
                         }
-
-                        // Remove processed line from buffer
                         receiveBuffer.delete(0, newlineIndex + 1)
-
-                        // Look for next line
                         newlineIndex = receiveBuffer.indexOf('\n')
                     }
                 }
             }
 
             override fun onRunError(e: Exception) {
-                lifecycleScope.launch(Dispatchers.Main) {
-                    // Only log error if we're still supposed to be connected
+                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
                     if (isConnected) {
                         appendLog(LogType.ERROR, "Read error: ${e.message}")
                     }
@@ -449,8 +390,6 @@ class UsbSerialFragment : Fragment() {
 
         val entry = "[$timestamp] [$typeStr] $message\n"
         logBuffer.append(entry)
-
-        // Limit buffer size
         if (logBuffer.length > MAX_LOG_BUFFER_SIZE) {
             logBuffer.delete(0, logBuffer.length - (MAX_LOG_BUFFER_SIZE * 4 / 5))
         }
@@ -479,8 +418,6 @@ class UsbSerialFragment : Fragment() {
         btnDisconnect.isEnabled = isConnected
         btnApplyConfig.isEnabled = isConnected
         updateSendButtonState()
-
-        // Update connection status with permission info
         updateConnectionStatus()
     }
 
@@ -521,11 +458,17 @@ class UsbSerialFragment : Fragment() {
         super.onDestroyView()
 
         try {
+            textWatcher?.let { etSendData.removeTextChangedListener(it) }
+            textWatcher = null
             stopContinuousReading()
             usbSerialPort?.close()
+            usbSerialPort = null
             requireContext().unregisterReceiver(usbPermissionReceiver)
+            deviceList.clear()
+            selectedDevice = null
+            logBuffer.clear()
+            receiveBuffer.clear()
         } catch (e: Exception) {
-            // Silent cleanup errors
         }
     }
 
