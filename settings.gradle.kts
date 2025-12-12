@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "kotlin_android_sample"
+rootProject.name = "KotlinAndroidSample"
 include(":app")
