@@ -7,13 +7,13 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.registerReceiver
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.example.kotlinandroidsample.R
@@ -76,20 +76,23 @@ class UsbSerialFragment : Fragment() {
         override fun onReceive(context: Context, intent: Intent) {
             if (ACTION_USB_PERMISSION == intent.action) {
                 synchronized(this) {
-                    val device = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice::class.java)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
-                    }
+                    // Use selectedDevice directly (more reliable than intent extra on some devices)
+                    selectedDevice?.let { device ->
+                        // Get the intent's reported permission result (may be incorrect on some devices)
+                        val intentResult = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
+                        // Get the actual permission status
+                        val actualPermission = usbManager.hasPermission(device)
 
-                    // Verify the permission is for the currently selected device
-                    if (device != null && device == selectedDevice) {
-                        if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
-                            hasPermission = true
+                        // Log both values for demo purposes (shows buggy device behavior)
+                        appendLog(LogType.INFO, "Permission intent result: $intentResult")
+                        appendLog(LogType.INFO, "Permission actual check: $actualPermission")
+
+                        // Use actual permission (more reliable)
+                        hasPermission = actualPermission
+
+                        if (hasPermission) {
                             appendLog(LogType.STATUS, "USB permission granted")
                         } else {
-                            hasPermission = false
                             appendLog(LogType.ERROR, "USB permission denied")
                         }
                         updateUIState()
@@ -114,8 +117,14 @@ class UsbSerialFragment : Fragment() {
         usbManager = requireContext().getSystemService(Context.USB_SERVICE) as UsbManager
 
         // Register broadcast receiver
+        // Note: USB permission broadcasts come from the system, so we need RECEIVER_EXPORTED
         val filter = IntentFilter(ACTION_USB_PERMISSION)
-        requireContext().registerReceiver(usbPermissionReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        registerReceiver(
+            requireContext(),
+            usbPermissionReceiver,
+            filter,
+            ContextCompat.RECEIVER_EXPORTED
+        )
 
         // Initialize views
         initializeViews(view)
