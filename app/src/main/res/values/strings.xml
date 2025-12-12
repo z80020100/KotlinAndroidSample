@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Kotlin Android Sample</string>
+    <string name="demo_lifecycle_scope_title">LifecycleScope Demo</string>
+    <string name="demo_lifecycle_scope_description">Demonstrates lifecycle-aware coroutine usage</string>
 </resources>
