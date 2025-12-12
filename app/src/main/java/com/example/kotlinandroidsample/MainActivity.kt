@@ -1,41 +1,43 @@
 package com.example.kotlinandroidsample
 
 import android.os.Bundle
-import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import androidx.recyclerview.widget.RecyclerView
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var tvStatus: TextView
+    private lateinit var rvDemoList: RecyclerView
+    private lateinit var demoAdapter: DemoAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        tvStatus = findViewById(R.id.tv_status)
+
+        rvDemoList = findViewById(R.id.rv_demo_list)
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-        lifecycleScope.launch(Dispatchers.IO) {
-            val result = initialize()
-            withContext(Dispatchers.Main) {
-                tvStatus.text = result
-            }
-        }
+
+        setupDemoList()
     }
 
-    private suspend fun initialize(): String {
-        delay(3000)
-        return "Finish"
+    private fun setupDemoList() {
+        val demoList = listOf(
+            DemoItem(
+                title = getString(R.string.demo_lifecycle_scope_title),
+                description = getString(R.string.demo_lifecycle_scope_description),
+                targetActivity = LifecycleScopeActivity::class
+            )
+        )
+
+        demoAdapter = DemoAdapter(demoList)
+        rvDemoList.adapter = demoAdapter
     }
 }
