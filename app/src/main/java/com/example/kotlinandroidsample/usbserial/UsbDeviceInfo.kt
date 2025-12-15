@@ -16,8 +16,8 @@ data class UsbDeviceInfo(
 
     companion object {
         fun from(device: UsbDevice): UsbDeviceInfo {
-            val vid = String.format("%04X", device.vendorId)
-            val pid = String.format("%04X", device.productId)
+            val vid = String.format("0x%04X", device.vendorId)
+            val pid = String.format("0x%04X", device.productId)
 
             val manufacturer = device.manufacturerName
             val product = device.productName
