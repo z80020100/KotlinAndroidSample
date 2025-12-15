@@ -61,11 +61,11 @@ class UsbSerialFragment : Fragment() {
     private var usbSerialPort: UsbSerialPort? = null
     private var serialInputOutputManager: SerialInputOutputManager? = null
 
-    private var deviceList: MutableList<UsbDeviceInfo> = mutableListOf()
+    private val deviceList = mutableListOf<UsbDeviceInfo>()
     private var selectedDevice: UsbDevice? = null
-    private var isConnected: Boolean = false
-    private var hasPermission: Boolean = false
-    private var autoScroll: Boolean = true
+    private var isConnected = false
+    private var hasPermission = false
+    private var autoScroll = true
     private val logBuffer = StringBuilder()
     private val receiveBuffer = StringBuilder()
     private val timestampFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
@@ -201,9 +201,7 @@ class UsbSerialFragment : Fragment() {
 
         val availableDrivers = UsbSerialProber.getDefaultProber().findAllDrivers(usbManager)
         deviceList.clear()
-        for (driver in availableDrivers) {
-            deviceList.add(UsbDeviceInfo.from(driver.device))
-        }
+        deviceList.addAll(availableDrivers.map { UsbDeviceInfo.from(it.device) })
 
         spinnerDevices.setText("", false)
         selectedDevice = null
@@ -319,27 +317,24 @@ class UsbSerialFragment : Fragment() {
     }
 
     private fun sendData() {
+        val port = usbSerialPort ?: return
+
         try {
             var text = etSendData.text.toString()
-
             if (cbAppendNewline.isChecked) {
                 text += "\r\n"
             }
-
-            val bytes = text.toByteArray(Charsets.UTF_8)
-            usbSerialPort?.write(bytes, WRITE_TIMEOUT_MS)
-
+            port.write(text.toByteArray(Charsets.UTF_8), WRITE_TIMEOUT_MS)
             appendLog(LogType.SENT, etSendData.text.toString())
         } catch (e: IOException) {
             appendLog(LogType.ERROR, "Send failed: ${e.message}")
-        } catch (e: NullPointerException) {
-            appendLog(LogType.ERROR, "Not connected")
         }
     }
 
     private fun startContinuousReading() {
         val listener = object : SerialInputOutputManager.Listener {
             override fun onNewData(data: ByteArray) {
+                if (view == null) return
                 viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
                     receiveBuffer.append(data.toString(Charsets.UTF_8))
 
@@ -356,6 +351,7 @@ class UsbSerialFragment : Fragment() {
             }
 
             override fun onRunError(e: Exception) {
+                if (view == null) return
                 viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
                     if (isConnected) {
                         appendLog(LogType.ERROR, "Read error: ${e.message}")
@@ -405,12 +401,10 @@ class UsbSerialFragment : Fragment() {
 
     private fun clearLog() {
         logBuffer.clear()
-        tvLogDisplay.text = ""
         appendLog(LogType.INFO, "Log cleared")
     }
 
     private fun updateUIState() {
-        btnScanDevices.isEnabled = true
         spinnerDevices.isEnabled = deviceList.isNotEmpty()
         tilDevices.isEnabled = deviceList.isNotEmpty()
         btnRequestPermission.isEnabled = selectedDevice != null && !hasPermission
@@ -467,8 +461,7 @@ class UsbSerialFragment : Fragment() {
             deviceList.clear()
             selectedDevice = null
             logBuffer.clear()
-            receiveBuffer.clear()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
         }
     }
 

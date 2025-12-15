@@ -111,7 +111,7 @@
             android:id="@+id/tv_connection_status"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Disconnected"
+            android:text="No device selected"
             android:textSize="16sp"
             android:textStyle="bold"
             android:gravity="center"

@@ -5,5 +5,5 @@ enum class LogType {
     SENT,      // Sent data (blue)
     ERROR,     // Error messages (red)
     STATUS,    // Status messages (gray)
-    INFO       // General info (black)
+    INFO       // General info (default text color)
 }
