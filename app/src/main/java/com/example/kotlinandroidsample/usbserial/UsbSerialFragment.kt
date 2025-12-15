@@ -82,14 +82,14 @@ class UsbSerialFragment : Fragment() {
                         val intentResult = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
                         val actualPermission = usbManager.hasPermission(device)
 
-                        appendLog(LogType.INFO, "Permission result - Intent: $intentResult, Actual: $actualPermission")
+                        appendLog(LogType.DEBUG, "Permission result - Intent: $intentResult, Actual: $actualPermission")
 
                         hasPermission = actualPermission
 
                         if (hasPermission) {
-                            appendLog(LogType.STATUS, "Device access permission granted")
+                            appendLog(LogType.INFO, "Device access permission granted")
                         } else {
-                            appendLog(LogType.ERROR, "Device access permission denied")
+                            appendLog(LogType.WARN, "Device access permission denied")
                         }
                         updateUIState()
                     }
@@ -214,7 +214,7 @@ class UsbSerialFragment : Fragment() {
         hasPermission = false
 
         if (deviceList.isEmpty()) {
-            appendLog(LogType.STATUS, "No USB serial devices found")
+            appendLog(LogType.INFO, "No USB serial devices found")
             tvDeviceInfo.text = "No serial devices found"
             tvDeviceSectionHeader.text = "USB Serial Device Selection"
         } else {
@@ -225,7 +225,7 @@ class UsbSerialFragment : Fragment() {
             val countText = if (deviceCount == 1) "1 device" else "$deviceCount devices"
             tvDeviceSectionHeader.text = "USB Serial Device Selection ($countText)"
             tvDeviceInfo.text = "Select a device from the list"
-            appendLog(LogType.STATUS, "Found $deviceCount USB serial device(s)")
+            appendLog(LogType.INFO, "Found $deviceCount USB serial device(s)")
         }
 
         updateUIState()
@@ -237,7 +237,7 @@ class UsbSerialFragment : Fragment() {
             // Normal mode: only request if not already granted
             if (!skipPermissionCheck && usbManager.hasPermission(device)) {
                 hasPermission = true
-                appendLog(LogType.STATUS, "Device access already granted")
+                appendLog(LogType.INFO, "Device access already granted")
                 updateUIState()
             } else {
                 val permissionIntent = PendingIntent.getBroadcast(
@@ -248,9 +248,9 @@ class UsbSerialFragment : Fragment() {
                 )
                 usbManager.requestPermission(device, permissionIntent)
                 val currentPermission = usbManager.hasPermission(device)
-                appendLog(LogType.STATUS, "Requesting device access (current: $currentPermission)")
+                appendLog(LogType.DEBUG, "Requesting device access (current: $currentPermission)")
             }
-        } ?: appendLog(LogType.ERROR, "No device selected")
+        } ?: appendLog(LogType.WARN, "No device selected")
     }
 
     private fun connectToDevice() {
@@ -269,9 +269,9 @@ class UsbSerialFragment : Fragment() {
                 startContinuousReading()
 
                 isConnected = true
-                appendLog(LogType.STATUS, "Connected to serial device")
+                appendLog(LogType.INFO, "Connected to serial device")
                 updateUIState()
-            } ?: appendLog(LogType.ERROR, "No device selected")
+            } ?: appendLog(LogType.WARN, "No device selected")
         } catch (e: Exception) {
             appendLog(LogType.ERROR, "Connection failed: ${e.message}")
             try { usbSerialPort?.close() } catch (_: Exception) {}
@@ -290,7 +290,7 @@ class UsbSerialFragment : Fragment() {
         } finally {
             usbSerialPort = null
             isConnected = false
-            appendLog(LogType.STATUS, "Disconnected from serial device")
+            appendLog(LogType.INFO, "Disconnected from serial device")
             updateUIState()
         }
     }
@@ -319,7 +319,7 @@ class UsbSerialFragment : Fragment() {
             }
 
             usbSerialPort?.setParameters(baudRate, dataBits, stopBits, parity)
-            appendLog(LogType.STATUS, "Config: ${baudRate}/${dataBits}/${stopBitsStr}/${parityStr}")
+            appendLog(LogType.INFO, "Config: ${baudRate}/${dataBits}/${stopBitsStr}/${parityStr}")
         } catch (e: Exception) {
             appendLog(LogType.ERROR, "Configuration failed: ${e.message}")
         }
@@ -334,7 +334,7 @@ class UsbSerialFragment : Fragment() {
                 text += "\r\n"
             }
             port.write(text.toByteArray(Charsets.UTF_8), WRITE_TIMEOUT_MS)
-            appendLog(LogType.SENT, etSendData.text.toString())
+            appendLog(LogType.TX, etSendData.text.toString())
         } catch (e: IOException) {
             appendLog(LogType.ERROR, "Send failed: ${e.message}")
         }
@@ -351,7 +351,7 @@ class UsbSerialFragment : Fragment() {
                     while (newlineIndex >= 0) {
                         val line = receiveBuffer.substring(0, newlineIndex).trimEnd('\r')
                         if (line.isNotEmpty()) {
-                            appendLog(LogType.RECEIVED, line)
+                            appendLog(LogType.RX, line)
                         }
                         receiveBuffer.delete(0, newlineIndex + 1)
                         newlineIndex = receiveBuffer.indexOf('\n')
@@ -371,7 +371,7 @@ class UsbSerialFragment : Fragment() {
 
         serialInputOutputManager = SerialInputOutputManager(usbSerialPort, listener)
         serialInputOutputManager?.start()
-        appendLog(LogType.STATUS, "Continuous reading started")
+        appendLog(LogType.DEBUG, "Continuous reading started")
     }
 
     private fun stopContinuousReading() {
@@ -379,18 +379,19 @@ class UsbSerialFragment : Fragment() {
             it.stop()
             serialInputOutputManager = null
             receiveBuffer.clear()
-            appendLog(LogType.STATUS, "Continuous reading stopped")
+            appendLog(LogType.DEBUG, "Continuous reading stopped")
         }
     }
 
     private fun appendLog(type: LogType, message: String) {
         val timestamp = timestampFormat.format(Date())
         val typeStr = when (type) {
-            LogType.RECEIVED -> "RX "
-            LogType.SENT -> "TX "
-            LogType.ERROR -> "ERR"
-            LogType.STATUS -> "STS"
+            LogType.RX -> "RX "
+            LogType.TX -> "TX "
+            LogType.DEBUG -> "DBG"
             LogType.INFO -> "INF"
+            LogType.WARN -> "WRN"
+            LogType.ERROR -> "ERR"
         }
 
         val entry = "[$timestamp] [$typeStr] $message\n"
@@ -446,25 +447,25 @@ class UsbSerialFragment : Fragment() {
             isConnected -> {
                 tvConnectionStatus.text = "Connected"
                 tvConnectionStatus.setTextColor(
-                    ContextCompat.getColor(requireContext(), R.color.log_received)
+                    ContextCompat.getColor(requireContext(), R.color.status_connected)
                 )
             }
             selectedDevice == null -> {
                 tvConnectionStatus.text = "No device selected"
                 tvConnectionStatus.setTextColor(
-                    ContextCompat.getColor(requireContext(), R.color.log_status)
+                    ContextCompat.getColor(requireContext(), R.color.status_no_device)
                 )
             }
             !hasPermission -> {
                 tvConnectionStatus.text = "Device access permission required"
                 tvConnectionStatus.setTextColor(
-                    ContextCompat.getColor(requireContext(), R.color.log_error)
+                    ContextCompat.getColor(requireContext(), R.color.status_no_permission)
                 )
             }
             else -> {
                 tvConnectionStatus.text = "Ready to connect"
                 tvConnectionStatus.setTextColor(
-                    ContextCompat.getColor(requireContext(), R.color.log_sent)
+                    ContextCompat.getColor(requireContext(), R.color.status_ready)
                 )
             }
         }
