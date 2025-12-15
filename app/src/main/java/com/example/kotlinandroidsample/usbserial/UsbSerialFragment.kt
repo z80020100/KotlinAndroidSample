@@ -36,13 +36,14 @@ import java.util.*
 class UsbSerialFragment : Fragment() {
 
     private lateinit var btnScanDevices: MaterialButton
-    private lateinit var btnRequestPermission: MaterialButton
+    private lateinit var btnRequestDeviceAccess: MaterialButton
     private lateinit var btnConnect: MaterialButton
     private lateinit var btnDisconnect: MaterialButton
     private lateinit var btnApplyConfig: MaterialButton
     private lateinit var btnSendData: MaterialButton
     private lateinit var btnClearLog: MaterialButton
     private lateinit var switchAutoscroll: SwitchMaterial
+    private lateinit var switchSkipPermissionCheck: SwitchMaterial
     private lateinit var spinnerDevices: AutoCompleteTextView
     private lateinit var tilDevices: TextInputLayout
     private lateinit var spinnerBaudRate: AutoCompleteTextView
@@ -66,6 +67,7 @@ class UsbSerialFragment : Fragment() {
     private var isConnected = false
     private var hasPermission = false
     private var autoScroll = true
+    private var skipPermissionCheck = false
     private val logBuffer = StringBuilder()
     private val receiveBuffer = StringBuilder()
     private val timestampFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
@@ -80,15 +82,14 @@ class UsbSerialFragment : Fragment() {
                         val intentResult = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
                         val actualPermission = usbManager.hasPermission(device)
 
-                        appendLog(LogType.INFO, "Permission intent result: $intentResult")
-                        appendLog(LogType.INFO, "Permission actual check: $actualPermission")
+                        appendLog(LogType.INFO, "Permission result - Intent: $intentResult, Actual: $actualPermission")
 
                         hasPermission = actualPermission
 
                         if (hasPermission) {
-                            appendLog(LogType.STATUS, "USB permission granted")
+                            appendLog(LogType.STATUS, "Device access permission granted")
                         } else {
-                            appendLog(LogType.ERROR, "USB permission denied")
+                            appendLog(LogType.ERROR, "Device access permission denied")
                         }
                         updateUIState()
                     }
@@ -123,13 +124,14 @@ class UsbSerialFragment : Fragment() {
 
     private fun initializeViews(view: View) {
         btnScanDevices = view.findViewById(R.id.btn_scan_devices)
-        btnRequestPermission = view.findViewById(R.id.btn_request_permission)
+        btnRequestDeviceAccess = view.findViewById(R.id.btn_request_device_access)
         btnConnect = view.findViewById(R.id.btn_connect)
         btnDisconnect = view.findViewById(R.id.btn_disconnect)
         btnApplyConfig = view.findViewById(R.id.btn_apply_config)
         btnSendData = view.findViewById(R.id.btn_send_data)
         btnClearLog = view.findViewById(R.id.btn_clear_log)
         switchAutoscroll = view.findViewById(R.id.switch_autoscroll)
+        switchSkipPermissionCheck = view.findViewById(R.id.switch_skip_permission_check)
         spinnerDevices = view.findViewById(R.id.spinner_devices)
         tilDevices = view.findViewById(R.id.til_devices)
         spinnerBaudRate = view.findViewById(R.id.spinner_baud_rate)
@@ -147,7 +149,7 @@ class UsbSerialFragment : Fragment() {
 
     private fun setupClickListeners() {
         btnScanDevices.setOnClickListener { scanForUsbDevices() }
-        btnRequestPermission.setOnClickListener { requestUsbPermission() }
+        btnRequestDeviceAccess.setOnClickListener { requestDeviceAccessPermission() }
         btnConnect.setOnClickListener { connectToDevice() }
         btnDisconnect.setOnClickListener { disconnectFromDevice() }
         btnApplyConfig.setOnClickListener { applySerialConfiguration() }
@@ -155,6 +157,10 @@ class UsbSerialFragment : Fragment() {
         btnClearLog.setOnClickListener { clearLog() }
         switchAutoscroll.setOnCheckedChangeListener { _, isChecked ->
             autoScroll = isChecked
+        }
+        switchSkipPermissionCheck.setOnCheckedChangeListener { _, isChecked ->
+            skipPermissionCheck = isChecked
+            updateUIState()
         }
 
         spinnerDevices.setOnItemClickListener { _, _, position, _ ->
@@ -208,28 +214,30 @@ class UsbSerialFragment : Fragment() {
         hasPermission = false
 
         if (deviceList.isEmpty()) {
-            appendLog(LogType.STATUS, "No USB devices found")
-            tvDeviceInfo.text = "No devices found"
-            tvDeviceSectionHeader.text = "USB Device Selection"
+            appendLog(LogType.STATUS, "No USB serial devices found")
+            tvDeviceInfo.text = "No serial devices found"
+            tvDeviceSectionHeader.text = "USB Serial Device Selection"
         } else {
             val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, deviceList)
             spinnerDevices.setAdapter(adapter)
 
             val deviceCount = deviceList.size
             val countText = if (deviceCount == 1) "1 device" else "$deviceCount devices"
-            tvDeviceSectionHeader.text = "USB Device Selection ($countText)"
+            tvDeviceSectionHeader.text = "USB Serial Device Selection ($countText)"
             tvDeviceInfo.text = "Select a device from the list"
-            appendLog(LogType.STATUS, "Found $deviceCount USB device(s)")
+            appendLog(LogType.STATUS, "Found $deviceCount USB serial device(s)")
         }
 
         updateUIState()
     }
 
-    private fun requestUsbPermission() {
+    private fun requestDeviceAccessPermission() {
         selectedDevice?.let { device ->
-            if (usbManager.hasPermission(device)) {
+            // Skip permission check: always request permission (even if already granted)
+            // Normal mode: only request if not already granted
+            if (!skipPermissionCheck && usbManager.hasPermission(device)) {
                 hasPermission = true
-                appendLog(LogType.STATUS, "Permission already granted")
+                appendLog(LogType.STATUS, "Device access already granted")
                 updateUIState()
             } else {
                 val permissionIntent = PendingIntent.getBroadcast(
@@ -239,7 +247,8 @@ class UsbSerialFragment : Fragment() {
                     PendingIntent.FLAG_IMMUTABLE
                 )
                 usbManager.requestPermission(device, permissionIntent)
-                appendLog(LogType.STATUS, "Requesting USB permission...")
+                val currentPermission = usbManager.hasPermission(device)
+                appendLog(LogType.STATUS, "Requesting device access (current: $currentPermission)")
             }
         } ?: appendLog(LogType.ERROR, "No device selected")
     }
@@ -260,7 +269,7 @@ class UsbSerialFragment : Fragment() {
                 startContinuousReading()
 
                 isConnected = true
-                appendLog(LogType.STATUS, "Connected to device")
+                appendLog(LogType.STATUS, "Connected to serial device")
                 updateUIState()
             } ?: appendLog(LogType.ERROR, "No device selected")
         } catch (e: Exception) {
@@ -281,7 +290,7 @@ class UsbSerialFragment : Fragment() {
         } finally {
             usbSerialPort = null
             isConnected = false
-            appendLog(LogType.STATUS, "Disconnected from device")
+            appendLog(LogType.STATUS, "Disconnected from serial device")
             updateUIState()
         }
     }
@@ -407,8 +416,21 @@ class UsbSerialFragment : Fragment() {
     private fun updateUIState() {
         spinnerDevices.isEnabled = deviceList.isNotEmpty()
         tilDevices.isEnabled = deviceList.isNotEmpty()
-        btnRequestPermission.isEnabled = selectedDevice != null && !hasPermission
-        btnConnect.isEnabled = hasPermission && !isConnected
+
+        // Skip permission check: allow requesting permission even if already granted
+        btnRequestDeviceAccess.isEnabled = if (skipPermissionCheck) {
+            selectedDevice != null
+        } else {
+            selectedDevice != null && !hasPermission
+        }
+
+        // Skip permission check: allow connecting even without permission
+        btnConnect.isEnabled = if (skipPermissionCheck) {
+            selectedDevice != null && !isConnected
+        } else {
+            hasPermission && !isConnected
+        }
+
         btnDisconnect.isEnabled = isConnected
         btnApplyConfig.isEnabled = isConnected
         updateSendButtonState()
@@ -434,7 +456,7 @@ class UsbSerialFragment : Fragment() {
                 )
             }
             !hasPermission -> {
-                tvConnectionStatus.text = "Permission required"
+                tvConnectionStatus.text = "Device access permission required"
                 tvConnectionStatus.setTextColor(
                     ContextCompat.getColor(requireContext(), R.color.log_error)
                 )

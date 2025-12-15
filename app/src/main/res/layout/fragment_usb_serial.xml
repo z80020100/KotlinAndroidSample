@@ -7,12 +7,12 @@
     android:padding="16dp"
     tools:context=".usbserial.UsbSerialFragment">
 
-        <!-- Device Selection Section -->
+        <!-- USB Serial Device Selection Section -->
         <TextView
             android:id="@+id/tv_device_section_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="USB Device Selection"
+            android:text="USB Serial Device Selection"
             android:textSize="18sp"
             android:textStyle="bold"
             android:paddingBottom="8dp"
@@ -23,7 +23,7 @@
             android:id="@+id/btn_scan_devices"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Scan for USB Devices"
+            android:text="Scan for USB Serial Devices"
             android:layout_marginTop="8dp"
             app:layout_constraintTop_toBottomOf="@id/tv_device_section_header"
             app:layout_constraintStart_toStartOf="parent"
@@ -35,7 +35,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:hint="Select USB Device"
+            android:hint="Select USB Serial Device"
             app:layout_constraintTop_toBottomOf="@id/btn_scan_devices"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
@@ -65,7 +65,7 @@
         <!-- Connection Control Section -->
         <TextView
             android:id="@+id/tv_connection_section_header"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="Connection Control"
             android:textSize="18sp"
@@ -73,13 +73,24 @@
             android:paddingTop="16dp"
             android:paddingBottom="8dp"
             app:layout_constraintTop_toBottomOf="@id/tv_device_info"
-            app:layout_constraintStart_toStartOf="parent" />
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/switch_skip_permission_check" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switch_skip_permission_check"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Skip permission check"
+            android:checked="false"
+            android:paddingTop="16dp"
+            app:layout_constraintTop_toBottomOf="@id/tv_device_info"
+            app:layout_constraintEnd_toEndOf="parent" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_request_permission"
+            android:id="@+id/btn_request_device_access"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Request USB Permission"
+            android:text="Request Device Access Permission"
             android:layout_marginTop="8dp"
             app:layout_constraintTop_toBottomOf="@id/tv_connection_section_header"
             app:layout_constraintStart_toStartOf="parent"
@@ -89,9 +100,9 @@
             android:id="@+id/btn_connect"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Connect to Device"
+            android:text="Connect"
             android:layout_marginTop="8dp"
-            app:layout_constraintTop_toBottomOf="@id/btn_request_permission"
+            app:layout_constraintTop_toBottomOf="@id/btn_request_device_access"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/btn_disconnect"
             android:layout_marginEnd="4dp" />
@@ -102,7 +113,7 @@
             android:layout_height="wrap_content"
             android:text="Disconnect"
             android:layout_marginTop="8dp"
-            app:layout_constraintTop_toBottomOf="@id/btn_request_permission"
+            app:layout_constraintTop_toBottomOf="@id/btn_request_device_access"
             app:layout_constraintStart_toEndOf="@id/btn_connect"
             app:layout_constraintEnd_toEndOf="parent"
             android:layout_marginStart="4dp" />
