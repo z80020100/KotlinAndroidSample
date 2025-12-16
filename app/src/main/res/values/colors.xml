@@ -2,4 +2,10 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Connection status colors -->
+    <color name="status_connected">#4CAF50</color>   <!-- Green - connected -->
+    <color name="status_ready">#2196F3</color>       <!-- Blue - ready to connect -->
+    <color name="status_no_permission">#F44336</color> <!-- Red - no permission -->
+    <color name="status_no_device">#9E9E9E</color>   <!-- Gray - no device selected -->
 </resources>
