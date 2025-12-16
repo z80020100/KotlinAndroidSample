@@ -30,8 +30,8 @@ import com.hoho.android.usbserial.util.SerialInputOutputManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.IOException
-import java.text.SimpleDateFormat
-import java.util.*
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 class UsbSerialFragment : Fragment() {
 
@@ -70,7 +70,7 @@ class UsbSerialFragment : Fragment() {
     private var skipPermissionCheck = false
     private val logBuffer = StringBuilder()
     private val receiveBuffer = StringBuilder()
-    private val timestampFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
+    private val timestampFormat = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
     private var textWatcher: TextWatcher? = null
 
     private val usbPermissionReceiver = object : BroadcastReceiver() {
@@ -384,7 +384,7 @@ class UsbSerialFragment : Fragment() {
     }
 
     private fun appendLog(type: LogType, message: String) {
-        val timestamp = timestampFormat.format(Date())
+        val timestamp = LocalDateTime.now().format(timestampFormat)
         val typeStr = when (type) {
             LogType.RX -> "RX "
             LogType.TX -> "TX "
